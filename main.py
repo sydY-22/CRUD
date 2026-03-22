@@ -3,8 +3,9 @@ from random import randint
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response 
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import Annotated, Any, Generic, TypeVar
 
+from pydantic import BaseModel
 from sqlmodel import Field, SQLModel, Session, create_engine, select
 
 
@@ -73,35 +74,43 @@ data = [
     }
 ]
 
+T = TypeVar("T")
+class Response(BaseModel, Generic[T]):
+    data: T
 
-@app.get("/campaigns", status_code=201)
-async def read_campaigns():
+
+@app.get("/campaigns", response_model=Response[list[Campaign]])
+async def read_campaigns(session: SessionDep):
     """Retreives campaign data."""
-    return {"campaigns": data}
+    data = session.exec(select(Campaign)).all()
+    return {"data": data}
 
 
-@app.get("/campaigns/{id}")
-async def read_campaign_by_id(id: int):
+@app.get("/campaigns/{id}", response_model=Response[Campaign])
+async def read_campaign(id: int, session: SessionDep):
     """Retreives campaign based on given id."""
-    for campaign in data:
-        if campaign.get("campaign_id") == id:        
-            return {"Campaign": campaign}
-    raise HTTPException(status_code=404)
+    data = session.get(Campaign, id)
+    if not data:
+        raise HTTPException(status_code=404)
+    return {"data": data}
 
 
-@app.post("/campaigns")
-async def create_campaign(body: dict[str, Any]):
-    """Creates a campaign."""
+# @app.post("/campaigns")
+# async def create_campaign(body: dict[str, Any]):
+#     """Creates a campaign."""
 
-    new: Any = {
-        "campaign_id": randint(100, 1000),
-        "name": body.get("name"),
-        "due_date": body.get("due_date"),
-        "created_at": datetime.now()
-    }
+#     new: Any = {
+#         "campaign_id": randint(100, 1000),
+#         "name": body.get("name"),
+#         "due_date": body.get("due_date"),
+#         "created_at": datetime.now()
+#     }
 
-    data.append(new)
-    return {"campaign": new}
+#     data.append(new)
+#     return {"campaign": new}
+
+
+
 
 
 @app.put("/campaigns/{id}")
