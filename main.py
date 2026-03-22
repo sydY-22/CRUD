@@ -108,21 +108,17 @@ async def create_campaign(campaign: CampaignCreate, session: SessionDep):
     return {"data": db_campaign}
 
 
-@app.put("/campaigns/{id}")
-async def update_campaign(id: int, body: dict[str, Any]):
-    """Upadate the campaign by id."""
-    for index, campaign in enumerate(data):
-        if campaign.get("campaign_id") == id:
-            updated: Any = {
-                "campaign_id": id,
-                "name": body.get("name"),
-                "due_date": body.get("due_date"),
-                "created_at": campaign.get("created_at")
-            }
-
-            data[index] = updated
-            return {"campaign": updated}
-    raise HTTPException(status_code=404)
+@app.put("/campaigns/{id}", response_model=Response[Campaign])
+async def update_campaign(id: int, campaign: CampaignCreate, session: SessionDep):
+    data = session.get(Campaign, id)
+    if not data:
+        raise HTTPException(status_code=404)
+    data.name = campaign.name
+    data.due_date = campaign.due_date
+    session.add(data) # add data
+    session.commit() # save the data
+    session.refresh(data) # get lattest changes with new added data
+    return {"data": data}
 
 
 @app.delete("/campaigns/{id}",)
