@@ -101,6 +101,7 @@ async def read_campaign(id: int, session: SessionDep):
 
 @app.post("/campaigns", status_code=201, response_model=Response[Campaign])
 async def create_campaign(campaign: CampaignCreate, session: SessionDep):
+    """Creates a campaign."""
     db_campaign = Campaign.model_validate(campaign)
     session.add(db_campaign)
     session.commit()
@@ -110,6 +111,7 @@ async def create_campaign(campaign: CampaignCreate, session: SessionDep):
 
 @app.put("/campaigns/{id}", response_model=Response[Campaign])
 async def update_campaign(id: int, campaign: CampaignCreate, session: SessionDep):
+    """Updates campaign by id."""
     data = session.get(Campaign, id)
     if not data:
         raise HTTPException(status_code=404)
@@ -117,18 +119,18 @@ async def update_campaign(id: int, campaign: CampaignCreate, session: SessionDep
     data.due_date = campaign.due_date
     session.add(data) # add data
     session.commit() # save the data
-    session.refresh(data) # get lattest changes with new added data
+    session.refresh(data) # get latest changes with new added data
     return {"data": data}
 
 
-@app.delete("/campaigns/{id}",)
-async def delete_campaign(id: int):
-    """Delete the campaign based off of given id."""
-    for index, campaign in enumerate(data):
-        if campaign.get("campaign_id") == id:
-            data.pop(index)
-            return Response(status_code=204)
-    raise HTTPException(status_code=404)
+@app.delete("/campaigns/{id}", status_code=204)
+async def delete_campaign(id: int, session: SessionDep):
+    """Deletes campaign by id."""
+    data = session.get(Campaign, id)
+    if not data:
+        raise HTTPException(status_code=404)
+    session.delete(data)
+    session.commit()
 
 
 """
